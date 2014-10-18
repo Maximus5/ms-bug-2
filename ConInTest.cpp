@@ -38,6 +38,35 @@ int ReadFromFile()
 	return 1;
 }
 
+int ReadFromFileW()
+{
+	HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	DWORD nRead = 0, nWrite = 0;
+	wchar_t szLine[4096+1];
+
+	SetConsoleMode(hIn, 1);
+
+	GetConsoleMode(hIn, &nRead);
+	GetConsoleMode(hOut, &nWrite);
+	printf("Console modes: In=0x%02X, Out=0x%02X\n", nRead, nWrite);
+
+	while (true)
+	{
+		SetConsoleTextAttribute(hOut, 0x07);
+		BOOL bRead = ReadConsole(hIn, szLine, ARRAYSIZE(szLine)-1, &nRead, NULL);
+		szLine[nRead] = 0;
+		for (DWORD i = 0; i < nRead; i++)
+		{
+			SetConsoleTextAttribute(hOut, szLine[i]==L'?' ? 0x0C : 0x07);
+			WriteConsoleW(hOut, szLine+i, 1, &nWrite, NULL);
+		}
+		WriteConsoleA(hOut, "\n", 1, &nWrite, NULL);
+	}
+
+	return 1;
+}
+
 int WriteStream()
 {
 	TCHAR szExe[MAX_PATH+16] = {}; GetModuleFileName(NULL, szExe, MAX_PATH);
@@ -97,7 +126,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (argc < 2 || _tcsicmp(argv[1], _T("/FLOOD")) == 0)
 		iRc = WriteStream();
 	else if (_tcsicmp(argv[1], _T("/INLINE")) == 0)
-		iRc = ReadFromFile();
+		iRc = ReadFromFileW();
 	return iRc;
 }
 
