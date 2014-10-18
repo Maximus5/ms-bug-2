@@ -9,35 +9,6 @@
 
 #define TEXT_STR L"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ|||"
 
-int ReadFromFile()
-{
-	HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
-	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-	DWORD nRead = 0, nWrite = 0;
-	char szLine[4096+1];
-
-	SetConsoleMode(hIn, 1);
-
-	GetConsoleMode(hIn, &nRead);
-	GetConsoleMode(hOut, &nWrite);
-	printf("Console modes: In=0x%02X, Out=0x%02X\n", nRead, nWrite);
-
-	while (true)
-	{
-		SetConsoleTextAttribute(hOut, 0x07);
-		BOOL bRead = ReadFile(hIn, szLine, ARRAYSIZE(szLine)-1, &nRead, NULL);
-		szLine[nRead] = 0;
-		for (DWORD i = 0; i < nRead; i++)
-		{
-			SetConsoleTextAttribute(hOut, szLine[i]==L'?' ? 0x0C : 0x07);
-			WriteConsoleA(hOut, szLine+i, 1, &nWrite, NULL);
-		}
-		WriteConsoleA(hOut, "\n", 1, &nWrite, NULL);
-	}
-
-	return 1;
-}
-
 int ReadFromFileW()
 {
 	HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
@@ -58,7 +29,7 @@ int ReadFromFileW()
 		szLine[nRead] = 0;
 		for (DWORD i = 0; i < nRead; i++)
 		{
-			SetConsoleTextAttribute(hOut, szLine[i]==L'?' ? 0x0C : 0x07);
+			SetConsoleTextAttribute(hOut, szLine[i]<'0'||szLine[i]>'|' ? 0xC0 : 0x07);
 			WriteConsoleW(hOut, szLine+i, 1, &nWrite, NULL);
 		}
 		WriteConsoleA(hOut, "\n", 1, &nWrite, NULL);
@@ -101,20 +72,31 @@ int WriteStream()
 
 	int iAllWritten = 0;
 
-	while (MessageBox(NULL, L"Press <Retry> to paste\n\n" TEXT_STR, L"ConInTest", MB_RETRYCANCEL|MB_SYSTEMMODAL) == IDRETRY)
+	Sleep(25);
+
+	while (true)
 	{
 		nWritten = 0;
-		//BOOL bWritten = WriteConsoleInputW(hIn, prc, nLen*2, &nWritten);
-		for (int i = 0; i < nLen*2; i++)
+		int nCount = nLen*2;
+		int nStep = 200;
+		for (int i = 0; i < nCount; i+=nStep)
 		{
-			nWrite = 0;
-			if (WriteConsoleInputW(hIn, prc+i, 1, &nWrite))
+			nWrite = min(nCount-i,nStep);
+			if (WriteConsoleInputW(hIn, prc+i, nWrite, &nWrite))
 				nWritten+=nWrite;
+			Sleep(50);
 		}
 		iAllWritten += nWritten;
 		wsprintfW(szExe, L"Writing to console input buffer: %i events, %i in last step", iAllWritten, nWritten);
 		SetConsoleTitle(szExe);
+
+		int nBtn = IDRETRY;
+		//nBtn = MessageBox(NULL, L"Press <Retry> to paste\n\n" TEXT_STR, L"ConInTest", MB_RETRYCANCEL|MB_SYSTEMMODAL);
+		if (nBtn != IDRETRY)
+			break;
 	}
+
+	TerminateProcess(pi.hProcess, 100);
 
 	SetConsoleTitle(_T("Done"));
 	return 1;
