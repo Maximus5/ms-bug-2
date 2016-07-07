@@ -6,6 +6,9 @@
 #include <Windows.h>
 #include <tchar.h>
 #include <stdio.h>
+#include <thread>
+
+#undef USE_THREAD
 
 #define TEXT_STR L"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ|||"
 
@@ -40,11 +43,15 @@ int ReadFromFileW()
 
 int WriteStream(int iSleep)
 {
+	#ifndef USE_THREAD
 	TCHAR szExe[MAX_PATH+16] = {}; GetModuleFileName(NULL, szExe, MAX_PATH);
 	TCHAR* pszName = _tcsrchr(szExe, _T('\\')); *(pszName++) = 0;
 	_tcscat(pszName, L" /INLINE");
 	STARTUPINFO si = {sizeof(si)}; PROCESS_INFORMATION pi = {};
 	BOOL bCreate = CreateProcess(NULL, pszName, NULL, NULL, TRUE, 0, NULL, szExe, &si, &pi);
+	#else
+	std::thread reader(ReadFromFileW);
+	#endif
 
 	HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
 	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -97,7 +104,9 @@ int WriteStream(int iSleep)
 			break;
 	}
 
+	#ifndef USE_THREAD
 	TerminateProcess(pi.hProcess, 100);
+	#endif
 
 	SetConsoleTitle(_T("Done"));
 	return 1;
