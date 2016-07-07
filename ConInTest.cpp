@@ -1,14 +1,30 @@
-// ConInTest.cpp : Defines the entry point for the console application.
-//
-
-#define _CRT_SECURE_NO_WARNINGS
 
 #include <Windows.h>
 #include <tchar.h>
 #include <stdio.h>
 #include <thread>
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
 
-#undef USE_THREAD
+#define USE_THREAD
+#undef USE_STATISTICS
+#define USE_READFILE
+#define USE_ONE_CHAR_CHUNK
+#undef USE_MSGBOX
+
+#if defined USE_READFILE
+	#undef USE_STATISTICS
+#endif
+
+#ifdef USE_THREAD
+std::mutex ready_mutex;
+std::condition_variable ready_check;
+std::condition_variable read_finish;
+#define USE_THREAD_SYNC
+#else
+#undef USE_THREAD_SYNC
+#endif
 
 #define TEXT_STR L"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ|||"
 
@@ -17,8 +33,13 @@ int ReadFromFileW()
 	HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
 	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 	DWORD nRead = 0, nWrite = 0;
+	#ifdef USE_STATISTICS
 	DWORD nGood = 0, nFail = 0;
+	#endif
 	wchar_t szLine[4096+1];
+	#ifdef USE_READFILE
+	char szANSI[4096+1];
+	#endif
 
 	SetConsoleMode(hIn, 1);
 
@@ -28,8 +49,23 @@ int ReadFromFileW()
 
 	while (true)
 	{
+		#ifdef USE_THREAD_SYNC
+		{
+			std::unique_lock<std::mutex> lock(ready_mutex);
+			ready_check.wait(lock);
+		}
+		#endif
 		SetConsoleTextAttribute(hOut, 0x07);
+
 		nRead = 0;
+		#ifdef USE_READFILE
+		DWORD nANSI = 0;
+		BOOL bRead = ReadFile(hIn, szANSI, ARRAYSIZE(szANSI)-1, &nANSI, NULL);
+		if (bRead && nANSI)
+		{
+			nRead = MultiByteToWideChar(CP_ACP, 0, szANSI, nANSI, szLine, ARRAYSIZE(szLine));
+		}
+		#else
 		DWORD nBar = 0;
 		for (size_t i = 0; i < (ARRAYSIZE(szLine)-1); i++)
 		{
@@ -47,7 +83,9 @@ int ReadFromFileW()
 				}
 			}
 		}
+		#endif
 		szLine[nRead] = 0;
+
 		bool bWriteInput = true;
 
 		#ifdef USE_STATISTICS
@@ -74,6 +112,13 @@ int ReadFromFileW()
 			}
 			WriteConsoleA(hOut, "\n", 1, &nWrite, NULL);
 		}
+
+		#ifdef USE_THREAD_SYNC
+		{
+			std::unique_lock<std::mutex> lock(ready_mutex);
+			read_finish.notify_one();
+		}
+		#endif
 	}
 
 	return 1;
@@ -125,35 +170,66 @@ int WriteStream(int iSleep)
 
 	Sleep(25);
 
-	while (true)
+	while (
+		#ifdef USE_MSGBOX
+		MessageBox(NULL, L"Press <Retry> to paste\n\n" TEXT_STR, L"ConInTest", MB_RETRYCANCEL|MB_SYSTEMMODAL) == IDRETRY
+		#else
+		true
+		#endif
+		)
 	{
 		nWritten = 0;
 		int nCount = nLen*2;
-		int nStep = 200;
+		int nStep =
+		#ifdef USE_ONE_CHAR_CHUNK
+			1
+		#else
+			200
+		#endif
+			;
 		for (int i = 0; i < nCount; i+=nStep)
 		{
+			#ifdef USE_ONE_CHAR_CHUNK
+			nWrite = 1;
+			#else
 			nWrite = min(nCount-i,nStep);
+			#endif
 			if (WriteConsoleInputW(hIn, prc+i, nWrite, &nWrite))
 				nWritten+=nWrite;
+			#ifndef USE_ONE_CHAR_CHUNK
 			if (iSleep > 0)
 				Sleep(iSleep);
+			#endif
 		}
 		iAllWritten += nWritten;
 
-		Sleep(25);
+		#ifdef USE_THREAD_SYNC
+		{
+			std::unique_lock<std::mutex> lock(ready_mutex);
+			ready_check.notify_one();
+		}
+		#endif
 
 		wchar_t szInfo[200];
 		swprintf_s(szInfo, L"Writing to console input buffer: %i events, %i in last step", iAllWritten, nWritten);
 		SetConsoleTitle(szInfo);
 
-		int nBtn = IDRETRY;
-		//nBtn = MessageBox(NULL, L"Press <Retry> to paste\n\n" TEXT_STR, L"ConInTest", MB_RETRYCANCEL|MB_SYSTEMMODAL);
-		if (nBtn != IDRETRY)
-			break;
+		#ifndef USE_MSGBOX
+		//Sleep(iSleep>0?iSleep:250);
+		#ifdef USE_THREAD_SYNC
+		{
+			std::unique_lock<std::mutex> lock(ready_mutex);
+			read_finish.wait(lock);
+		}
+		#endif
+		#endif
 	}
 
 	#ifndef USE_THREAD
 	TerminateProcess(pi.hProcess, 100);
+	#else
+	TerminateThread(reader.native_handle(), 100);
+	reader.join();
 	#endif
 
 	printf("\nDone\n");
@@ -165,7 +241,7 @@ int _tmain(int argc, _TCHAR* argv[])
 {
 	if (argc >= 2 && _tcsicmp(argv[1], _T("/INLINE")) == 0)
 		return ReadFromFileW();
-	int iSleep = 50;
+	int iSleep = 0;
 	if (argc >= 2 && isdigit(argv[1][0]))
 		iSleep = _tcstol(argv[1], NULL, 10);
 	return WriteStream(iSleep);
