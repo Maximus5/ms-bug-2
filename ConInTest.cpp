@@ -68,7 +68,8 @@ int ReadFromFileW()
 		{
 			for (DWORD i = 0; i < nRead; i++)
 			{
-				SetConsoleTextAttribute(hOut, szLine[i]<'0'||szLine[i]>'|' ? 0xC0 : 0x07);
+				WORD attr = (szLine[i]=='?' || szLine[i]<'0' || szLine[i]>'|') ? 0xC0 : 0x07;
+				SetConsoleTextAttribute(hOut, attr);
 				WriteConsoleW(hOut, szLine+i, 1, &nWrite, NULL);
 			}
 			WriteConsoleA(hOut, "\n", 1, &nWrite, NULL);
