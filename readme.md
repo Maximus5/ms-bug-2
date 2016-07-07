@@ -13,6 +13,8 @@ It writes 65-chars long string into console input buffer in one thread and read 
 If your Windows has this bug, you'll see `?` or some other errors instead or inside characters of the expected string.
 These error characters are highlighted - black text on red background.
 
+![Example of output](https://github.com/Maximus5/ms-bug-2/blob/master/example.png)
+
 ### References
 
 * https://github.com/Maximus5/issues/760
