@@ -56,6 +56,8 @@ int WriteStream(int iSleep)
 	HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
 	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 
+	SetConsoleMode(hIn, 1);
+
 	wchar_t szText[] = TEXT_STR;
 	const int nLen = lstrlen(szText);
 	INPUT_RECORD* prc = new INPUT_RECORD[nLen*2];
