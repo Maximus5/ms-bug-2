@@ -29,7 +29,24 @@ int ReadFromFileW()
 	while (true)
 	{
 		SetConsoleTextAttribute(hOut, 0x07);
-		BOOL bRead = ReadConsole(hIn, szLine, ARRAYSIZE(szLine)-1, &nRead, NULL);
+		nRead = 0;
+		DWORD nBar = 0;
+		for (size_t i = 0; i < (ARRAYSIZE(szLine)-1); i++)
+		{
+			DWORD nChar = 0;
+			if (ReadConsole(hIn, szLine+i, 1, &nChar, NULL) && nChar)
+			{
+				if (szLine[i] == L'\n')
+					break;
+				nRead++;
+				if (szLine[i] == L'|')
+				{
+					nBar++;
+					if (nBar == 3)
+						break;
+				}
+			}
+		}
 		szLine[nRead] = 0;
 		bool bWriteInput = true;
 
@@ -94,6 +111,10 @@ int WriteStream(int iSleep)
 		rc.Event.KeyEvent.uChar.UnicodeChar = ch;
 		rc.Event.KeyEvent.wVirtualKeyCode = 0;
 		rc.Event.KeyEvent.wVirtualScanCode = 0;
+		if (ch == L'\n')
+		{
+			rc.Event.KeyEvent.wVirtualKeyCode = VK_RETURN;
+		}
 		prc[i*2] = rc;
 		prc[i*2+1] = rc;
 		prc[i*2+1].Event.KeyEvent.bKeyDown = FALSE;
