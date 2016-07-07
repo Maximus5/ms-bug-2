@@ -138,8 +138,9 @@ int WriteStream(int iSleep)
 				Sleep(iSleep);
 		}
 		iAllWritten += nWritten;
-		wsprintfW(szExe, L"Writing to console input buffer: %i events, %i in last step", iAllWritten, nWritten);
-		SetConsoleTitle(szExe);
+		wchar_t szInfo[200];
+		swprintf_s(szInfo, L"Writing to console input buffer: %i events, %i in last step", iAllWritten, nWritten);
+		SetConsoleTitle(szInfo);
 
 		int nBtn = IDRETRY;
 		//nBtn = MessageBox(NULL, L"Press <Retry> to paste\n\n" TEXT_STR, L"ConInTest", MB_RETRYCANCEL|MB_SYSTEMMODAL);
