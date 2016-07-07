@@ -38,7 +38,7 @@ int ReadFromFileW()
 	return 1;
 }
 
-int WriteStream()
+int WriteStream(int iSleep)
 {
 	TCHAR szExe[MAX_PATH+16] = {}; GetModuleFileName(NULL, szExe, MAX_PATH);
 	TCHAR* pszName = _tcsrchr(szExe, _T('\\')); *(pszName++) = 0;
@@ -84,7 +84,8 @@ int WriteStream()
 			nWrite = min(nCount-i,nStep);
 			if (WriteConsoleInputW(hIn, prc+i, nWrite, &nWrite))
 				nWritten+=nWrite;
-			Sleep(50);
+			if (iSleep > 0)
+				Sleep(iSleep);
 		}
 		iAllWritten += nWritten;
 		wsprintfW(szExe, L"Writing to console input buffer: %i events, %i in last step", iAllWritten, nWritten);
@@ -104,11 +105,11 @@ int WriteStream()
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	int iRc = 1;
-	if (argc < 2 || _tcsicmp(argv[1], _T("/FLOOD")) == 0)
-		iRc = WriteStream();
-	else if (_tcsicmp(argv[1], _T("/INLINE")) == 0)
-		iRc = ReadFromFileW();
-	return iRc;
+	if (argc >= 2 && _tcsicmp(argv[1], _T("/INLINE")) == 0)
+		return ReadFromFileW();
+	int iSleep = 50; TCHAR* pch;
+	if (argc >= 2 && isdigit(argv[1][0]))
+		iSleep = _tcstol(argv[1], &pch, 10);
+	return WriteStream(iSleep);
 }
 
