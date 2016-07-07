@@ -164,9 +164,8 @@ int _tmain(int argc, _TCHAR* argv[])
 {
 	if (argc >= 2 && _tcsicmp(argv[1], _T("/INLINE")) == 0)
 		return ReadFromFileW();
-	int iSleep = 50; TCHAR* pch;
+	int iSleep = 50;
 	if (argc >= 2 && isdigit(argv[1][0]))
-		iSleep = _tcstol(argv[1], &pch, 10);
+		iSleep = _tcstol(argv[1], NULL, 10);
 	return WriteStream(iSleep);
 }
-
