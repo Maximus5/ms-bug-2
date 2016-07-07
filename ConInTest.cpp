@@ -138,6 +138,9 @@ int WriteStream(int iSleep)
 				Sleep(iSleep);
 		}
 		iAllWritten += nWritten;
+
+		Sleep(25);
+
 		wchar_t szInfo[200];
 		swprintf_s(szInfo, L"Writing to console input buffer: %i events, %i in last step", iAllWritten, nWritten);
 		SetConsoleTitle(szInfo);
