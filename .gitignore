@@ -32,3 +32,4 @@ UpgradeLog.XML
 Debug
 .vs
 *.db
+*.opendb
