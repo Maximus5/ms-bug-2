@@ -155,6 +155,7 @@ int WriteStream(int iSleep)
 	TerminateProcess(pi.hProcess, 100);
 	#endif
 
+	printf("\nDone\n");
 	SetConsoleTitle(_T("Done"));
 	return 1;
 }
