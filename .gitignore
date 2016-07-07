@@ -30,3 +30,5 @@ x64
 _UpgradeReport_Files/
 UpgradeLog.XML
 Debug
+.vs
+*.db
