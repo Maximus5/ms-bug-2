@@ -17,6 +17,7 @@ int ReadFromFileW()
 	HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
 	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 	DWORD nRead = 0, nWrite = 0;
+	DWORD nGood = 0, nFail = 0;
 	wchar_t szLine[4096+1];
 
 	SetConsoleMode(hIn, 1);
@@ -30,12 +31,31 @@ int ReadFromFileW()
 		SetConsoleTextAttribute(hOut, 0x07);
 		BOOL bRead = ReadConsole(hIn, szLine, ARRAYSIZE(szLine)-1, &nRead, NULL);
 		szLine[nRead] = 0;
-		for (DWORD i = 0; i < nRead; i++)
+		bool bWriteInput = true;
+
+		#ifdef USE_STATISTICS
+		if (wcscmp(TEXT_STR, szLine) == 0)
 		{
-			SetConsoleTextAttribute(hOut, szLine[i]<'0'||szLine[i]>'|' ? 0xC0 : 0x07);
-			WriteConsoleW(hOut, szLine+i, 1, &nWrite, NULL);
+			nGood++;
+			printf("\rGood: %u; Fail: %u;", nGood, nFail);
+			bWriteInput = false;
 		}
-		WriteConsoleA(hOut, "\n", 1, &nWrite, NULL);
+		else
+		{
+			nFail++;
+			printf("\rGood: %u; Fail: %u;\n", nGood, nFail);
+		}
+		#endif
+
+		if (bWriteInput)
+		{
+			for (DWORD i = 0; i < nRead; i++)
+			{
+				SetConsoleTextAttribute(hOut, szLine[i]<'0'||szLine[i]>'|' ? 0xC0 : 0x07);
+				WriteConsoleW(hOut, szLine+i, 1, &nWrite, NULL);
+			}
+			WriteConsoleA(hOut, "\n", 1, &nWrite, NULL);
+		}
 	}
 
 	return 1;
